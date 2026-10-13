@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Camper Wasserlevel</title>
+<style>
+:root {
+    --bg-primary: #0f1419;
+    --bg-secondary: #1a2332;
+    --bg-card: #1e2d3d;
+    --bg-input: #0d1b2a;
+    --accent: #00d4aa;
+    --accent-dim: #00a88a;
+    --accent-glow: rgba(0,212,170,0.3);
+    --warning: #ffb800;
+    --danger: #ff4757;
+    --success: #00d4aa;
+    --text-primary: #e8f0f8;
+    --text-secondary: #8899aa;
+    --text-muted: #556677;
+    --border: #2a3a4a;
+    --radius: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+.header {
+    background: var(--bg-secondary);
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.header h1 { font-size: 1.2rem; font-weight: 600; color: var(--accent); }
+.status-dots { display: flex; gap: 8px; align-items: center; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.status-dot.active { background: var(--success); box-shadow: 0 0 8px var(--accent-glow); }
+.status-dot.warning { background: var(--warning); }
+.tabs { display: flex; background: var(--bg-secondary); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.tab {
+    flex: 1; padding: 12px 8px; text-align: center; font-size: 0.8rem; font-weight: 500;
+    color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0,212,170,0.05); }
+.tab-content { display: none; padding: 16px; }
+.tab-content.active { display: block; }
+.card { background: var(--bg-card); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+.card-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 12px; }
+
+/* Tank Graphic */
+.tank-container {
+    position: relative; width: 140px; height: 200px; margin: 10px auto 20px;
+    border: 3px solid var(--border); border-radius: 16px; background: var(--bg-input); overflow: hidden;
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
+}
+.tank-fill { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: linear-gradient(180deg, var(--accent) 0%, #007799 100%); transition: height 0.5s ease-in-out; }
+.tank-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+
+/* Values */
+.values-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.value-item { background: var(--bg-input); border-radius: 8px; padding: 12px; text-align: center; }
+.value-label { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 4px; }
+.value-num { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.value-unit { font-size: 0.7rem; color: var(--text-muted); }
+
+/* Forms & Tables */
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px; }
+.form-group input { width: 100%; padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 0.9rem; outline: none; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.calib-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.calib-table th, .calib-table td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.calib-table input { width: 100%; padding: 6px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; color: #fff; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; width: 100%; }
+.btn-primary { background: var(--accent); color: var(--bg-primary); }
+.btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
+.btn-danger { background: rgba(255,71,87,0.15); color: var(--danger); border: 1px solid var(--danger); }
+.btn-row { display: flex; gap: 8px; margin-top: 12px; }
+
+.info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--bg-card); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 20px; font-size: 0.85rem; color: var(--accent); opacity: 0; transition: all 0.3s; z-index: 999; }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+@media (min-width: 600px) { body { display: flex; justify-content: center; } .app-wrap { width: 100%; max-width: 480px; } }
+</style>
+</head>
+<body>
+<div class="app-wrap">
+    <div class="header">
+        <h1>💧 Camper Frischwasser</h1>
+        <div class="status-dots">
+            <span class="status-dot" id="dot-wifi" title="WiFi"></span>
+            <span class="status-dot" id="dot-mqtt" title="MQTT"></span>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" data-tab="live">💧 Live</div>
+        <div class="tab" data-tab="calib">📊 Matrix</div>
+        <div class="tab" data-tab="mqtt">⚙️ MQTT</div>
+        <div class="tab" data-tab="wifi">📶 WiFi</div>
+    </div>
+
+    <!-- LIVE TAB -->
+    <div class="tab-content active" id="tab-live">
+        <div class="card">
+            <div class="tank-container">
+                <div class="tank-fill" id="tank-fill"></div>
+                <div class="tank-overlay" id="v-percent">0%</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="values-grid">
+                <div class="value-item">
+                    <div class="value-label">Inhalt</div>
+                    <div class="value-num" id="v-liters">0.0</div>
+                    <div class="value-unit">Liter</div>
+                </div>
+                <div class="value-item">
+                    <div class="value-label">Spannung</div>
+                    <div class="value-num" id="v-voltage">0.000</div>
+                    <div class="value-unit">Volt</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="info-row"><span class="info-label">Glättungsfilter</span><span class="info-value" id="filter-state">--</span></div>
+            <div class="btn-row"><button class="btn btn-primary" onclick="toggleFilter()">🔀 Filter ein/aus</button></div>
+        </div>
+    </div>
+
+    <!-- CALIBRATION MATRIX TAB -->
+    <div class="tab-content" id="tab-calib">
+        <div class="card">
+            <div class="card-title">Tankgröße</div>
+            <div class="form-group"><label>Fassungsvermögen (Liter)</label><input type="number" id="cfg-tank-size" min="1" max="5000" step="0.1" value="100"></div>
+            <div class="btn-row"><button class="btn btn-primary" onclick="saveTankSize()">💾 Tankgröße speichern</button></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Volt-zu-Füllstand Matrix</div>
+            <table class="calib-table">
+                <thead>
+                    <tr>
+                        <th>Spannung (V)</th>
+                        <th>Füllstand (%)</th>
+                        <th>Aktion</th>
+                    </tr>
+                </thead>
+                <tbody id="matrix-rows"></tbody>
+            </table>
+            <button class="btn btn-secondary" onclick="addMatrixRow()">+ Punkt hinzufügen</button>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="saveMatrix()">💾 Matrix Speichern</button>
+        </div>
+    </div>
+
+    <!-- MQTT TAB -->
+    <div class="tab-content" id="tab-mqtt">
+        <div class="card">
+            <div class="card-title">MQTT Settings (Home Assistant)</div>
+            <div class="form-row">
+                <div class="form-group"><label>Server</label><input type="text" id="cfg-mqtt-server"></div>
+                <div class="form-group"><label>Port</label><input type="number" id="cfg-mqtt-port" value="1883"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Benutzer</label><input type="text" id="cfg-mqtt-user"></div>
+                <div class="form-group"><label>Passwort</label><input type="password" id="cfg-mqtt-pass" placeholder="(unverändert)" autocomplete="new-password"></div>
+            </div>
+            <div class="form-group"><label>Topic-Prefix</label><input type="text" id="cfg-mqtt-prefix" value="camper/waterlevel"></div>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="saveSetup()">💾 Speichern</button>
+        </div>
+    </div>
+
+    <!-- WIFI TAB -->
+    <div class="tab-content" id="tab-wifi">
+        <div class="card">
+            <div class="card-title">Verbindungsstatus</div>
+            <div class="info-row"><span class="info-label">Status</span><span class="info-value" id="wifi-state">--</span></div>
+            <div class="info-row"><span class="info-label">RSSI</span><span class="info-value" id="wifi-rssi">--</span></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">WLAN-Verbindung</div>
+            <div class="form-group"><label>SSID</label><input type="text" id="cfg-wifi-ssid"></div>
+            <div class="form-group"><label>Passwort</label><input type="password" id="cfg-wifi-pass" placeholder="(unverändert)" autocomplete="new-password"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Access Point</div>
+            <div class="form-group"><label>Name (SSID)</label><input type="text" id="cfg-ap-ssid"></div>
+            <div class="form-group"><label>Passwort (min. 8 Zeichen)</label><input type="password" id="cfg-ap-pass" placeholder="(unverändert)" autocomplete="new-password"></div>
+        </div>
+
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveWifi()">💾 Speichern & Verbinden</button></div>
+        <div class="btn-row"><button class="btn btn-danger" onclick="restartDevice()">🔄 Neustart</button></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+</div>
+
+<script>
+const MAX_CALIB_POINTS = 15;
+let ws = null;
+let calibData = [];
+
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    });
+});
+
+function connectWS() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(proto + '//' + location.host + '/ws');
+    ws.onmessage = (evt) => {
+        try { updateLiveData(JSON.parse(evt.data)); } catch (e) {}
+    };
+    ws.onclose = () => { setTimeout(connectWS, 3000); };
+}
+
+function updateLiveData(d) {
+    const pct = Math.max(0, Math.min(100, d.percent || 0));
+    document.getElementById('tank-fill').style.height = pct + '%';
+    document.getElementById('v-percent').textContent = Math.round(pct) + '%';
+    document.getElementById('v-liters').textContent = (d.liters || 0).toFixed(1);
+    document.getElementById('v-voltage').textContent = (d.voltage || 0).toFixed(3);
+    document.getElementById('filter-state').textContent = d.filter ? 'AN' : 'AUS';
+
+    document.getElementById('dot-wifi').className = 'status-dot ' + (d.wifi === 'Verbunden' ? 'active' : '');
+    document.getElementById('dot-mqtt').className = 'status-dot ' + (d.mqtt ? 'active' : '');
+    document.getElementById('wifi-state').textContent = d.wifi;
+    document.getElementById('wifi-rssi').textContent = d.rssi ? d.rssi + ' dBm' : '--';
+}
+
+// POST a (partial) config object; throws if the device rejects it
+async function postConfig(obj) {
+    const resp = await fetch('/api/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(obj)
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+}
+
+async function loadSetup() {
+    try {
+        const resp = await fetch('/api/config');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const cfg = await resp.json();
+
+        // Passwords are never sent by the device; the fields stay empty on purpose
+        document.getElementById('cfg-mqtt-server').value = cfg.mqtt_server || '';
+        document.getElementById('cfg-mqtt-port').value = cfg.mqtt_port || 1883;
+        document.getElementById('cfg-mqtt-user').value = cfg.mqtt_user || '';
+        document.getElementById('cfg-mqtt-prefix').value = cfg.mqtt_prefix || 'camper/waterlevel';
+        document.getElementById('cfg-wifi-ssid').value = cfg.wifi_ssid || '';
+        document.getElementById('cfg-ap-ssid').value = cfg.ap_ssid || '';
+
+        calibData = cfg.calib || [];
+        document.getElementById('cfg-tank-size').value = cfg.tank_size || 100;
+        renderMatrix();
+    } catch (e) { showToast('Fehler beim Laden'); }
+}
+
+function renderMatrix() {
+    const tbody = document.getElementById('matrix-rows');
+    let html = '';
+    calibData.forEach((pt, idx) => {
+        html += `
+            <tr>
+                <td><input type="number" step="0.001" value="${pt.v}" onchange="calibData[${idx}].v = parseFloat(this.value)"></td>
+                <td><input type="number" step="0.1" value="${pt.l}" onchange="calibData[${idx}].l = parseFloat(this.value)"></td>
+                <td><button class="btn btn-danger" style="padding:4px 8px;" onclick="deleteMatrixRow(${idx})">X</button></td>
+            </tr>`;
+    });
+    tbody.innerHTML = html;
+}
+
+function addMatrixRow() {
+    if (calibData.length >= MAX_CALIB_POINTS) {
+        showToast('Maximal ' + MAX_CALIB_POINTS + ' Punkte');
+        return;
+    }
+    calibData.push({v: 0.0, l: 0.0});
+    renderMatrix();
+}
+
+function deleteMatrixRow(idx) {
+    calibData.splice(idx, 1);
+    renderMatrix();
+}
+
+async function saveMatrix() {
+    const clean = calibData.filter(p => Number.isFinite(p.v) && Number.isFinite(p.l));
+    if (clean.length < 2) {
+        showToast('Mindestens 2 gültige Punkte nötig');
+        return;
+    }
+    clean.sort((a, b) => a.v - b.v);
+    try {
+        await postConfig({calib: clean});
+        calibData = clean;
+        showToast('✓ Matrix gespeichert');
+        renderMatrix();
+    } catch (e) { showToast('Fehler beim Speichern'); }
+}
+
+async function saveTankSize() {
+    const size = parseFloat(document.getElementById('cfg-tank-size').value);
+    if (!Number.isFinite(size) || size < 1 || size > 5000) {
+        showToast('Tankgröße: 1 bis 5000 Liter');
+        return;
+    }
+    try {
+        await postConfig({tank_size: size});
+        showToast('✓ Tankgröße gespeichert');
+    } catch (e) { showToast('Fehler beim Speichern'); }
+}
+
+async function saveSetup() {
+    const cfg = {
+        mqtt_server: document.getElementById('cfg-mqtt-server').value.trim(),
+        mqtt_port: parseInt(document.getElementById('cfg-mqtt-port').value) || 1883,
+        mqtt_user: document.getElementById('cfg-mqtt-user').value,
+        mqtt_prefix: document.getElementById('cfg-mqtt-prefix').value.trim()
+    };
+    // An empty password field means "keep the stored password"
+    const pass = document.getElementById('cfg-mqtt-pass').value;
+    if (pass) cfg.mqtt_pass = pass;
+
+    try {
+        await postConfig(cfg);
+        // MQTT settings are applied at boot, so restart the device
+        showToast('✓ MQTT gespeichert - Neustart...');
+        setTimeout(() => restartDevice(), 1500);
+    } catch (e) { showToast('Fehler beim Speichern'); }
+}
+
+async function saveWifi() {
+    const cfg = {
+        wifi_ssid: document.getElementById('cfg-wifi-ssid').value
+    };
+    // An empty password field means "keep the stored password"
+    const pass = document.getElementById('cfg-wifi-pass').value;
+    if (pass) cfg.wifi_pass = pass;
+
+    // Access point: empty fields keep the stored values
+    const apSsid = document.getElementById('cfg-ap-ssid').value.trim();
+    if (apSsid) cfg.ap_ssid = apSsid;
+    const apPass = document.getElementById('cfg-ap-pass').value;
+    if (apPass) {
+        if (apPass.length < 8) { showToast('AP-Passwort: mindestens 8 Zeichen'); return; }
+        cfg.ap_pass = apPass;
+    }
+
+    try {
+        await postConfig(cfg);
+        showToast('✓ WiFi gespeichert - Neustart...');
+        setTimeout(() => restartDevice(), 1500);
+    } catch (e) { showToast('Fehler beim Speichern'); }
+}
+
+// Toggles the smoothing filter on the device (the state is stored in flash)
+async function toggleFilter() {
+    try {
+        const resp = await fetch('/api/filter', { method: 'POST' });
+        const j = await resp.json();
+        document.getElementById('filter-state').textContent = (j.filter === 'ON') ? 'AN' : 'AUS';
+    } catch (e) { showToast('Fehler beim Umschalten'); }
+}
+
+async function restartDevice() {
+    try {
+        await fetch('/api/restart', { method: 'POST' });
+        showToast('Gerät startet neu...');
+    } catch (e) {}
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+connectWS();
+loadSetup();
+</script>
+</body>
+</html>
