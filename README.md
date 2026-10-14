@@ -1,3 +1,5 @@
+Wird nur noch hier gepflegt als Kombisensor https://github.com/hflocki/camper-tanklevel
+
 # Camper Waterlevel – ESP32 Frischwasser-Levelsensor
 
 DIY-Frischwassersensor für Wohnmobile und Wohnwagen mit analogem Tankgeber (getestet mit einem Votronic Tankgeber). Ein ESP32 misst die Spannung des Gebers, rechnet sie über eine einstellbare Kennlinie in Füllstand und Liter um und sendet die Werte per MQTT. Home Assistant erkennt die Entitäten automatisch. Alles wird über eine Web-Oberfläche eingestellt, ohne neu zu flashen.
